@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Class Fund Tracker - ₱5 Daily</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Class Fund Tracker</h1>
+            <p class="text-gray-600 mt-2">₱5 per day - Monday, Tuesday, Thursday, Friday, Saturday (Wednesday rest day)</p>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-medium text-gray-500">Total Students</h3>
+                <p class="text-2xl font-bold text-gray-900" id="totalStudents">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-medium text-gray-500">Total Collection</h3>
+                <p class="text-2xl font-bold text-green-600" id="totalCollection">₱0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-medium text-gray-500">Paid Today</h3>
+                <p class="text-2xl font-bold text-blue-600" id="paidToday">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-sm font-medium text-gray-500">Unpaid Today</h3>
+                <p class="text-2xl font-bold text-red-600" id="unpaidToday">0</p>
+            </div>
+        </div>
+
+        <!-- GitHub Sync Section -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-700">GitHub Sync</h2>
+                    <p class="text-sm text-gray-500">Save and load data from GitHub repository</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="showSetupModal()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition">
+                        ⚙️ GitHub Setup
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quick Sync Buttons -->
+            <div class="flex flex-wrap gap-2">
+                <button onclick="saveToGitHub()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">
+                    💾 Save to GitHub
+                </button>
+                <button onclick="loadFromGitHub()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
+                    📂 Load from GitHub
+                </button>
+                <button onclick="exportLocalFile()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition">
+                    📥 Download Backup
+                </button>
+                <button onclick="importLocalFile()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition">
+                    📤 Upload Backup
+                </button>
+            </div>
+            
+            <!-- Sync Status -->
+            <div class="mt-4 text-sm" id="syncStatus"></div>
+        </div>
+
+        <!-- Date Selector -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <h2 class="text-lg font-semibold text-gray-700">Today's Date:</h2>
+                    <input type="date" id="currentDate" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="markAllPaid()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">
+                        Mark All Paid
+                    </button>
+                    <button onclick="resetAllUnpaid()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition">
+                        Reset All Unpaid
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Students Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student Name</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Mon</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Tue</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Wed (Rest)</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Thu</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Fri</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Sat</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">History</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="studentTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- History Modal -->
+        <div id="historyModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-lg bg-white">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold" id="modalStudentName">Payment History</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                <div id="paymentHistory" class="max-h-96 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <!-- GitHub Setup Modal -->
+        <div id="githubModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-lg bg-white">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">GitHub Setup</h3>
+                    <button onclick="closeGitHubModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                
+                <div class="space-y-4">
+                    <p class="text-sm text-gray-600">Para ma-save sa GitHub, kailangan mo ng:</p>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">GitHub Username</label>
+                        <input type="text" id="githubUsername" class="mt-1 block w-full border rounded-md px-3 py-2">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Repository Name</label>
+                        <input type="text" id="githubRepo" class="mt-1 block w-full border rounded-md px-3 py-2" value="class-fund-tracker">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Personal Access Token</label>
+                        <input type="password" id="githubToken" class="mt-1 block w-full border rounded-md px-3 py-2">
+                        <p class="text-xs text-gray-500 mt-1">
+                            <a href="https://github.com/settings/tokens" target="_blank" class="text-blue-600">Gumawa ng token</a> 
+                            (piliin ang "repo" scope)
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Filename</label>
+                        <input type="text" id="githubFilename" class="mt-1 block w-full border rounded-md px-3 py-2" value="class-fund-data.json">
+                    </div>
+                    
+                    <button onclick="saveGitHubSettings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
+                        Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Student list
+        const students = [
+            "ALMADRA, DON MICHAEL ONTIMARA",
+            "ARAÑO, YANCEL GABRIEL RONA",
+            "ARMOREDA, IAN RODELL AGUTEP",
+            "CUSTODIO, JOHN LLOYD MOMO",
+            "DE LEON, CLARENCE JAY ROSAS",
+            "ESPIRITU, RAIN HARRIE TINAGAN",
+            "GULAPA, JOHN ALEXIS TESORERO",
+            "LLEGO, DEDRICK JIRO INAT",
+            "MADRIAGA, CYRUS DANIEL AQUINO",
+            "MAGLIPON, LEBRON JAMES MATEMATICO",
+            "MANLANGIT, RAIN OLATAN",
+            "PAJARES, EURY ANDREAI ESTILO",
+            "PAJO DARREN ASTILLERO",
+            "PALERO, SEAN LLOYD AVELLANA",
+            "PASCUA, JOHN LOUIS TUBAL",
+            "PASCUA, KARL REINIEL CABACUNGAN",
+            "POQUIZ, CEDRIC CARL BORJA",
+            "ROSALIOS, KHEVIN CARL PIDONG",
+            "SARDIDO, MANUEL JURADO",
+            "TANATE, ADRIAN VILLANOS",
+            "VELASCO, JOSHUA SAPUES",
+            "YERRO, LANCE SIMON ROSAS",
+            "DAYAG, ARWILDAN ARTETA",
+            "FERNANDEZ, RHIAN DAYAGANON",
+            "GARCIA, AIRA MAE ELLAN",
+            "GUIZON, NICOLE GUELAS",
+            "MANGALIMAN, KCZELEEN SAN JOSE",
+            "NIDO, BRIANNA GIELYN ALANO",
+            "GASPAR, STANLEY"
+        ];
+
+        const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+        const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        // Initialize data
+        let paymentData = {};
+
+        // Load saved data
+        function loadSavedData() {
+            const saved = localStorage.getItem('classFundData');
+            if (saved) {
+                paymentData = JSON.parse(saved);
+            } else {
+                // Initialize empty data for all students
+                students.forEach(student => {
+                    paymentData[student] = { payments: {}, history: [] };
+                });
+            }
+            renderTable();
+        }
+
+        // Save to localStorage
+        function saveToLocal() {
+            localStorage.setItem('classFundData', JSON.stringify(paymentData));
+            updateSyncStatus('Data saved locally ✓', 'text-green-600');
+        }
+
+        // GitHub functions
+        function showSetupModal() {
+            document.getElementById('githubModal').classList.remove('hidden');
+            // Load saved settings
+            document.getElementById('githubUsername').value = localStorage.getItem('githubUsername') || '';
+            document.getElementById('githubRepo').value = localStorage.getItem('githubRepo') || 'class-fund-tracker';
+            document.getElementById('githubFilename').value = localStorage.getItem('githubFilename') || 'class-fund-data.json';
+        }
+
+        function closeGitHubModal() {
+            document.getElementById('githubModal').classList.add('hidden');
+        }
+
+        function saveGitHubSettings() {
+            localStorage.setItem('githubUsername', document.getElementById('githubUsername').value);
+            localStorage.setItem('githubRepo', document.getElementById('githubRepo').value);
+            localStorage.setItem('githubToken', document.getElementById('githubToken').value);
+            localStorage.setItem('githubFilename', document.getElementById('githubFilename').value);
+            
+            closeGitHubModal();
+            updateSyncStatus('GitHub settings saved!', 'text-green-600');
+        }
+
+        async function saveToGitHub() {
+            const username = localStorage.getItem('githubUsername');
+            const repo = localStorage.getItem('githubRepo');
+            const token = localStorage.getItem('githubToken');
+            const filename = localStorage.getItem('githubFilename') || 'class-fund-data.json';
+
+            if (!username || !repo || !token) {
+                alert('Please set up GitHub settings first!');
+                showSetupModal();
+                return;
+            }
+
+            updateSyncStatus('Saving to GitHub...', 'text-blue-600');
+
+            try {
+                // Prepare data
+                const data = {
+                    lastUpdated: new Date().toISOString(),
+                    paymentData: paymentData,
+                    students: students
+                };
+
+                // Check if file exists
+                const fileUrl = `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
+                
+                let sha = null;
+                try {
+                    const checkResponse = await fetch(fileUrl, {
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    
+                    if (checkResponse.ok) {
+                        const fileInfo = await checkResponse.json();
+                        sha = fileInfo.sha;
+                    }
+                } catch (e) {
+                    // File doesn't exist, ignore
+                }
+
+                // Save to GitHub
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+                
+                const response = await fetch(fileUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Update class fund data',
+                        content: content,
+                        sha: sha
+                    })
+                });
+
+                if (response.ok) {
+                    updateSyncStatus('✅ Successfully saved to GitHub!', 'text-green-600');
+                    
+                    // Show the GitHub URL
+                    const githubUrl = `https://github.com/${username}/${repo}/blob/main/${filename}`;
+                    updateSyncStatus(`✅ Saved! <a href="${githubUrl}" target="_blank" class="underline">View on GitHub</a>`, 'text-green-600');
+                } else {
+                    throw new Error('Failed to save to GitHub');
+                }
+            } catch (error) {
+                console.error('GitHub error:', error);
+                updateSyncStatus('❌ Error saving to GitHub. Check your settings.', 'text-red-600');
+            }
+        }
+
+        async function loadFromGitHub() {
+            const username = localStorage.getItem('githubUsername');
+            const repo = localStorage.getItem('githubRepo');
+            const token = localStorage.getItem('githubToken');
+            const filename = localStorage.getItem('githubFilename') || 'class-fund-data.json';
+
+            if (!username || !repo) {
+                alert('Please set up GitHub settings first!');
+                showSetupModal();
+                return;
+            }
+
+            updateSyncStatus('Loading from GitHub...', 'text-blue-600');
+
+            try {
+                const url = `https://api.github.com/repos/${username}/${repo}/contents/${filename}`;
+                
+                const response = await fetch(url, {
+                    headers: token ? {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    } : {
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Decode content
+                    const content = decodeURIComponent(escape(atob(data.content)));
+                    const githubData = JSON.parse(content);
+                    
+                    if (githubData.paymentData) {
+                        paymentData = githubData.paymentData;
+                        saveToLocal();
+                        renderTable();
+                        updateSyncStatus('✅ Successfully loaded from GitHub!', 'text-green-600');
+                    } else {
+                        throw new Error('Invalid data format');
+                    }
+                } else {
+                    throw new Error('File not found');
+                }
+            } catch (error) {
+                console.error('Load error:', error);
+                updateSyncStatus('❌ Error loading from GitHub. File may not exist.', 'text-red-600');
+            }
+        }
+
+        // Local file backup
+        function exportLocalFile() {
+            const data = {
+                lastUpdated: new Date().toISOString(),
+                paymentData: paymentData,
+                students: students
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `class-fund-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            
+            updateSyncStatus('✅ Backup downloaded!', 'text-green-600');
+        }
+
+        function importLocalFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.paymentData) {
+                            if (confirm('Replace current data with backup?')) {
+                                paymentData = data.paymentData;
+                                saveToLocal();
+                                renderTable();
+                                updateSyncStatus('✅ Backup loaded!', 'text-green-600');
+                            }
+                        } else {
+                            alert('Invalid backup file');
+                        }
+                    } catch (error) {
+                        alert('Error loading file');
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        function updateSyncStatus(message, colorClass) {
+            const statusDiv = document.getElementById('syncStatus');
+            statusDiv.innerHTML = message;
+            statusDiv.className = `mt-4 text-sm ${colorClass}`;
+            
+            // Clear after 5 seconds
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // Payment functions
+        function checkIfPaid(student, date, day) {
+            return paymentData[student]?.payments?.[date]?.[day] || false;
+        }
+
+        function togglePayment(student, date, day) {
+            if (!paymentData[student]) {
+                paymentData[student] = { payments: {}, history: [] };
+            }
+            
+            if (!paymentData[student].payments[date]) {
+                paymentData[student].payments[date] = {};
+            }
+            
+            const currentStatus = paymentData[student].payments[date][day] || false;
+            const newStatus = !currentStatus;
+            
+            paymentData[student].payments[date][day] = newStatus;
+            
+            // Add to history
+            if (newStatus) {
+                paymentData[student].history.push({
+                    date: date,
+                    day: day,
+                    amount: 5,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+            saveToLocal();
+            renderTable();
+        }
+
+        function viewHistory(student) {
+            const modal = document.getElementById('historyModal');
+            const modalName = document.getElementById('modalStudentName');
+            const historyDiv = document.getElementById('paymentHistory');
+            
+            modalName.textContent = student;
+            
+            let historyHtml = '';
+            if (paymentData[student]?.history?.length > 0) {
+                const sortedHistory = [...paymentData[student].history].sort((a, b) => 
+                    new Date(b.date) - new Date(a.date)
+                );
+                
+                sortedHistory.forEach(record => {
+                    historyHtml += `
+                        <div class="border-b border-gray-200 py-3">
+                            <p class="text-sm font-medium">${record.date}</p>
+                            <p class="text-xs text-gray-500">${record.day} - ₱${record.amount}</p>
+                            <p class="text-xs text-gray-400">${new Date(record.timestamp).toLocaleString()}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                historyHtml = '<p class="text-gray-500 text-sm">No payment history yet.</p>';
+            }
+            
+            historyDiv.innerHTML = historyHtml;
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = '';
+            
+            const selectedDate = document.getElementById('currentDate').value;
+            let paidCount = 0;
+
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                let rowHtml = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${student}
+                    </td>
+                `;
+
+                days.forEach(day => {
+                    const isPaid = checkIfPaid(student, selectedDate, day);
+                    if (isPaid) paidCount++;
+                    
+                    rowHtml += `
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <button onclick="togglePayment('${student.replace(/'/g, "\\'")}', '${selectedDate}', '${day}')" 
+                                class="w-8 h-8 rounded-full ${isPaid ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} 
+                                text-white font-semibold transition">
+                                ${isPaid ? '✓' : '✗'}
+                            </button>
+                        </td>
+                    `;
+                });
+
+                rowHtml += `
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <button onclick="viewHistory('${student.replace(/'/g, "\\'")}')" 
+                            class="text-blue-600 hover:text-blue-900 text-sm font-medium">
+                            View
+                        </button>
+                    </td>
+                `;
+
+                row.innerHTML = rowHtml;
+                tbody.appendChild(row);
+            });
+
+            updateStats(paidCount);
+        }
+
+        function updateStats(paidCount) {
+            document.getElementById('totalStudents').textContent = students.length;
+            
+            let total = 0;
+            Object.values(paymentData).forEach(student => {
+                Object.values(student.payments || {}).forEach(dayPayments => {
+                    Object.values(dayPayments).forEach(paid => {
+                        if (paid) total += 5;
+                    });
+                });
+            });
+            
+            document.getElementById('totalCollection').textContent = `₱${total}`;
+            
+            const selectedDate = document.getElementById('currentDate').value;
+            let todayPaid = 0;
+            
+            students.forEach(student => {
+                days.forEach(day => {
+                    if (checkIfPaid(student, selectedDate, day)) {
+                        todayPaid++;
+                    }
+                });
+            });
+            
+            document.getElementById('paidToday').textContent = todayPaid;
+            document.getElementById('unpaidToday').textContent = (students.length * days.length) - todayPaid;
+        }
+
+        function markAllPaid() {
+            const selectedDate = document.getElementById('currentDate').value;
+            
+            students.forEach(student => {
+                if (!paymentData[student]) {
+                    paymentData[student] = { payments: {}, history: [] };
+                }
+                
+                if (!paymentData[student].payments[selectedDate]) {
+                    paymentData[student].payments[selectedDate] = {};
+                }
+                
+                days.forEach(day => {
+                    if (!paymentData[student].payments[selectedDate][day]) {
+                        paymentData[student].payments[selectedDate][day] = true;
+                        paymentData[student].history.push({
+                            date: selectedDate,
+                            day: day,
+                            amount: 5,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                });
+            });
+            
+            saveToLocal();
+            renderTable();
+        }
+
+        function resetAllUnpaid() {
+            const selectedDate = document.getElementById('currentDate').value;
+            
+            students.forEach(student => {
+                if (paymentData[student]?.payments[selectedDate]) {
+                    delete paymentData[student].payments[selectedDate];
+                    paymentData[student].history = paymentData[student].history.filter(
+                        h => h.date !== selectedDate
+                    );
+                }
+            });
+            
+            saveToLocal();
+            renderTable();
+        }
+
+        // Initialize
+        document.getElementById('currentDate').valueAsDate = new Date();
+        document.getElementById('currentDate').addEventListener('change', renderTable);
+        
+        // Load data
+        loadSavedData();
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('historyModal');
+            const githubModal = document.getElementById('githubModal');
+            if (event.target == modal) modal.classList.add('hidden');
+            if (event.target == githubModal) githubModal.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
